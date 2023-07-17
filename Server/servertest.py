@@ -1,5 +1,5 @@
 import socket
-import os
+import os, datetime
 import sys
 import random
 import json
@@ -9,6 +9,13 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 
+def delay(seconds):
+    start_time = datetime.datetime.now()
+    while True:
+        current_time = datetime.datetime.now()
+        elapsed_time = (current_time - start_time).total_seconds()
+        if elapsed_time >= seconds:
+            break
 
 def server():
     # Server port
@@ -34,8 +41,7 @@ def server():
     serverSocket.listen(5)
 
     while 1:
-        try:
-            # Server accepts client connection
+        # Server accepts client connection
             connectionSocket, addr = serverSocket.accept()
 
             with open('server_public.pem', 'rb') as file:
@@ -58,21 +64,16 @@ def server():
 
                 serverSocket.close()
 
-                print("reached 61")
                 # Receive user info from client
                 userEncrypted = connectionSocket.recv(2048)
-                print(userEncrypted)
+                delay(0.1)
                 username = cipher_rsa_dec_server.decrypt(userEncrypted)
-                print("reached 65")
                 username = username.decode('ascii')
 
-                print("reached 67")
-
                 passEncrypted = connectionSocket.recv(2048)
+                delay(0.1)
                 password = cipher_rsa_dec_server.decrypt(passEncrypted)
                 password = password.decode('ascii')
-
-                print("reached  70")
 
                 # Check against json file to determine if valid user
                 validUser = 0
@@ -115,7 +116,7 @@ def server():
                     # Receive OK message from client
                     okMsgEncrypted = connectionSocket.recv(2048)
                     okPadded = cipher_symmetric.decrypt(okMsgEncrypted)
-                    okMsg = unpad(okPadded, 16)
+                    okMsg = unpad(okPadded, 16).decode('ascii')
 
                     # Check for attacker interference
                     if (okMsg != "OK"):
@@ -182,16 +183,6 @@ def server():
 
             # Parent doesn't need this connection
             connectionSocket.close()
-
-        except socket.error as e:
-            print('An error occured:', e)
-            serverSocket.close()
-            sys.exit(1)
-        except:
-            print('Goodbye')
-            serverSocket.close()
-            sys.exit(0)
-
 
 # -------
 server()
