@@ -92,9 +92,11 @@ class Client:
 
         # Client sends user info
         userEncrypted = self.cipher_rsa_en.encrypt(username.encode("ascii"))
+        print()
         self.clientSocket.send(userEncrypted)
 
         passEncrypted = self.cipher_rsa_en.encrypt(password.encode("ascii"))
+        print()
         self.clientSocket.send(passEncrypted)
         return
 
@@ -105,17 +107,19 @@ class Client:
         Return: None
         """
         loginResponse = self.clientSocket.recv(2048)
+        print()
         try:
             loginResponseString = self.cipher_rsa_dec.decrypt(loginResponse)
         except:
             loginResponseString == "Valid User"
-            self.loginResponse = loginResponse
 
         if loginResponseString == "Invalid username or password":
             # Terminate the connection
             print("Invalid username or password.\nTerminating.")
             self.clientSocket.close()
             sys.exit(0)
+
+        self.loginResponse = loginResponse
 
     def receive_symmetric_key(self):
         """
@@ -154,6 +158,7 @@ class Client:
         self.connect_to_server()
         self.send_user_info()
         self.receive_user_info()
+        self.receive_symmetric_key()
         self.send_ok_response()
         return
 
@@ -169,9 +174,13 @@ class Client:
 
         while menuChoice != "4":
             # Receive menu from server
+            print("REEE")
             menuMsgEncrypted = self.clientSocket.recv(2048)
+            print("REEE")
             menuMsgPadded = self.cipher_symmetric.decrypt(menuMsgEncrypted)
+            print("REEE")
             menuMsg = unpad(menuMsgPadded, 16).decode("ascii")
+            print("REEE")
             manuChoice = input(menuMsg)
 
             # Send menu choice to server

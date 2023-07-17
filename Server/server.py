@@ -99,10 +99,12 @@ class Server:
 
                     # Receive user info from client
                     userEncrypted = self.connectionSocket.recv(2048)
+                    print("THIS IS A VERYY LONG STRING")
                     username = self.cipher_rsa_dec_server.decrypt(userEncrypted)
                     username = username.decode("ascii")
 
                     passEncrypted = self.connectionSocket.recv(2048)
+                    print("107")
                     password = self.cipher_rsa_dec_server.decrypt(passEncrypted)
                     password = password.decode("ascii")
 
@@ -133,7 +135,12 @@ class Server:
                         client_pubkey = RSA.import_key(client_public)
                         cipher_rsa_en_client = PKCS1_OAEP.new(client_pubkey)
 
+                        print("REEE")
+
                         symEncrypted = cipher_rsa_en_client.encrypt(sym_key)
+
+                        print("REEE")
+
                         self.connectionSocket.send(symEncrypted)
 
                         print(
@@ -141,9 +148,12 @@ class Server:
                         )
 
                         # Receive OK Msg from Client
+                        print("151")
                         okMsgEncrypted = self.connectionSocket.recv(2048)
+                        print("THIS IS A VERY LONG STRING AS WELL")
                         okPadded = self.cipher_symmetric.decrypt(okMsgEncrypted)
-                        okMsg = unpad(okPadded, AES.block_size)
+                        print("I AM DOING THE SAME THING FOR 155 JUST TO BE SAFE")
+                        # okMsg = unpad(okPadded, 16)
 
                         # Start menu loop
                         menuChoice = "0"
@@ -152,17 +162,25 @@ class Server:
                                 "Select the operation:\n1) Create and send an email\n2) Display the inbox\n"
                                 "3) Display the email contents\n4) Terminate the connection\nchoice: "
                             )
-                        menuMsgEncrypted = self.cipher_symmetric.encrypt(
-                            pad(menuMsg.encode("ascii"), 16)
-                        )
-                        self.connectionSocket.send(menuMsgEncrypted)
+                            print(self.cipher_symmetric)
+                            print(menuChoice)
+                            menuMsgEncrypted = self.cipher_symmetric.encrypt(
+                                pad(menuMsg.encode("ascii"), 16)
+                            )
+                            print(menuMsgEncrypted)
+                            print("171")
 
-                        # Receive menu choice from client
-                        menuChoiceEncrypted = self.connectionSocket.recv(2048)
-                        menuChoicePadded = self.cipher_symmetric.decrypt(
-                            menuChoiceEncrypted
-                        )
-                        menuChoice = unpad(menuChoicePadded, 16).decode("ascii")
+                            self.connectionSocket.send(menuMsgEncrypted)
+
+                            # Receive menu choice from clientf
+                            menuChoiceEncrypted = self.connectionSocket.recv(2048)
+
+                            menuChoicePadded = self.cipher_symmetric.decrypt(
+                                menuChoiceEncrypted
+                            )
+                            print("REEE")
+
+                            menuChoice = unpad(menuChoicePadded, 16).decode("ascii")
 
                     if validUser == 0:
                         # Invalid user, send termination notice
