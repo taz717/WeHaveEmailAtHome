@@ -1,5 +1,5 @@
 import socket
-import os
+import os, datetime
 import sys
 import random
 import json
@@ -9,6 +9,13 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 
+def delay(seconds):
+    start_time = datetime.datetime.now()
+    while True:
+        current_time = datetime.datetime.now()
+        elapsed_time = (current_time - start_time).total_seconds()
+        if elapsed_time >= seconds:
+            break
 
 def server():
     # Server port
@@ -58,21 +65,16 @@ def server():
 
                 serverSocket.close()
 
-                print("reached 61")
                 # Receive user info from client
                 userEncrypted = connectionSocket.recv(2048)
-                print(userEncrypted)
+                delay(0.1)
                 username = cipher_rsa_dec_server.decrypt(userEncrypted)
-                print("reached 65")
                 username = username.decode('ascii')
 
-                print("reached 67")
-
                 passEncrypted = connectionSocket.recv(2048)
+                delay(0.1)
                 password = cipher_rsa_dec_server.decrypt(passEncrypted)
                 password = password.decode('ascii')
-
-                print("reached  70")
 
                 # Check against json file to determine if valid user
                 validUser = 0
@@ -85,8 +87,6 @@ def server():
                             validUser = 1
 
                 f.close()
-
-                print("reached 82")
 
                 if (validUser == 1):
                     # Valid user
@@ -114,8 +114,9 @@ def server():
 
                     # Receive OK message from client
                     okMsgEncrypted = connectionSocket.recv(2048)
+                    delay(0.1)
                     okPadded = cipher_symmetric.decrypt(okMsgEncrypted)
-                    okMsg = unpad(okPadded, 16)
+                    okMsg = unpad(okPadded, 16).decode('ascii')
 
                     # Check for attacker interference
                     if (okMsg != "OK"):
@@ -125,8 +126,8 @@ def server():
                     menuChoice = "0"
                     while (menuChoice != "4"):
                         # Send client menu message
-                        menuMsg = "Select the operation:\n1) Create and send an email\n2) Display the inbox\n" \
-                                  "3) Display the email contents\n4) Terminate the connection\nchoice: "
+                        menuMsg = "Select the operation:\n\t1) Create and send an email\n\t2) Display the inbox\n" \
+                                  "\t3) Display the email contents\n\t4) Terminate the connection\nchoice: "
                         menuMsgEncrypted = cipher_symmetric.encrypt(
                             pad(menuMsg.encode('ascii'), 16))
                         connectionSocket.send(menuMsgEncrypted)
@@ -153,8 +154,6 @@ def server():
                             emailSize = unpad(
                                 emailSizePadded, 16).decode('ascii')
 
-                            print(emailSize)
-
                             # Receive email from client
                             received = 0
                             email = ""
@@ -167,8 +166,47 @@ def server():
                                 email = email + incoming
                                 received += 2048
 
-                            print(email)
+                            # Parse email to get required fields and generate timestamp
+                            timeStamp = datetime.datetime.now()
+                            parts = email.split("\n")
+                            temp = parts[0].split(":")
+                            sender = temp[1][1:]
 
+                            temp = parts[1].split(":")
+                            destinations = temp[1][1:]
+
+                            temp = parts[2].split(":")
+                            title = temp[1][1:]
+
+                            temp = parts[3].split(":")
+                            contentLength = temp[1][1:]
+
+                            content = parts[5]
+        
+                            # Compose the final email to be saved to the storage
+                            finalEmail = f"From: {sender}\nTo: {destinations}\nTime and Date: {timeStamp}\nTitle: {title}\nContent Length: {contentLength}\nContent:\n{content}"
+
+                            # Save the email to a text file in the recipient directories
+                            # Parse the destination string into usernames
+                            recipients = destinations.split(";")
+
+                            # Loop through recipients and save to their directories
+                            for recipient in recipients:
+                                # Remove whitespace from username if present
+                                recipient = recipient.strip()
+
+                                if len(recipient) > 1:
+                                    if recipient in ["client1", "client2", "client3", "client4", "client5"]:
+                                        # Open directory or create it if it doesn't exist
+                                        directory = os.getcwd()
+                                        fileName = f"{directory}/{recipient}/{sender}_{title}.txt"
+                                        os.makedirs(os.path.dirname(fileName), exist_ok=True)
+                                        with open(fileName, "w") as f:
+                                            f.write(finalEmail)
+                                        f.close()
+
+                            print(f"An email from {sender} is sent to {destinations} has a content length of {contentLength}.")
+                            
                 if (validUser == 0):
                     # Invalid user, send termination notice
                     invalidMsg = "Invalid username or password"
@@ -191,7 +229,6 @@ def server():
             print('Goodbye')
             serverSocket.close()
             sys.exit(0)
-
 
 # -------
 server()
