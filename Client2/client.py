@@ -151,7 +151,7 @@ def client():
                             success = 1
                         except:
                             fileName = input("No such file exists, please enter a valid file name: ")
-
+                   
                 else:
                     # User is entering contents manually
                     content = input("Enter message contents: ")
@@ -200,8 +200,19 @@ def client():
 
                 # Print send confirmation to client
                 print("The message is sent to the server.")
+            elif (menuChoice == "2"):
+                inboxEncrypted = clientSocket.recv(2048)
+                inboxPadded = cipher_symmetric.decrypt(inboxEncrypted)
+                inboxMsg = unpad(inboxPadded, 16).decode('ascii')
+                print(inboxMsg)
 
+                 # Send OK response message to server
+                okMsg = "OK"
+                okMsgEncrypted = cipher_symmetric.encrypt(
+                pad(okMsg.encode('ascii'), 16))
+                clientSocket.send(okMsgEncrypted)
         # Client terminate connection with the server
+        print(f"Terminating connection with server")
         clientSocket.close()
 
     except socket.error as e:
