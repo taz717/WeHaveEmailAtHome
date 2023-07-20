@@ -9,6 +9,38 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 
+def format_inbox_msg(inbox):
+    inboxMsg = f"{'Index'}\t{'From'.ljust(12)}\t{'DateTime'.ljust(26)}\t{'Title'.ljust(12)}\n"
+    for i in range(len(inbox)):
+        inboxMsg +=  f'{i}\t{inbox[i]["From"].ljust(12)}\t{str(inbox[i]["DateTime"]).ljust(26)}\t{inbox[i]["Title"].ljust(12)}\n'
+    return inboxMsg
+#get the values from the file
+def get_inbox_data(data):
+    formatData = {}
+    for line in data.splitlines():
+        key, val = line.split(": ")
+        if (key == "From" ):
+            formatData[key] = val
+        elif (key == "Time and Date"):
+            #formatData["DateTime"] = datetime.datetime.strptime(val, '%Y-%m-%d %H:%M:%S.%f')
+            formatData["DateTime"] = val
+        elif(key == "Title"):
+            formatData[key] = val
+            return formatData
+        
+#get inbox data and sort it from latest to most recent
+def get_inbox(username):
+    inbox = []
+    for root, direct, files in os.walk(username):
+        for file in files:
+            path = f"{username}/{file}"
+            with open(path,'r' ) as data:
+                data = data.read()
+                formatData = get_inbox_data(data)
+                inbox.append(formatData)
+    sortedInbox = sorted( inbox, key=lambda item: item["DateTime"])
+    return format_inbox_msg(sortedInbox)
+
 def delay(seconds):
     start_time = datetime.datetime.now()
     while True:
@@ -124,7 +156,7 @@ def server():
 
                     # Start menu loop
                     menuChoice = "0"
-                    while (menuChoice != "4"):
+                    while (1):
                         # Send client menu message
                         menuMsg = "Select the operation:\n\t1) Create and send an email\n\t2) Display the inbox\n" \
                                   "\t3) Display the email contents\n\t4) Terminate the connection\nchoice: "
@@ -206,7 +238,20 @@ def server():
                                         f.close()
 
                             print(f"An email from {sender} is sent to {destinations} has a content length of {contentLength}.")
-                            
+                        elif(menuChoice == "2"):
+                            inbox = get_inbox(username)         
+                            sendInboxEncrypted = cipher_symmetric.encrypt(
+                            pad(inbox.encode('ascii'), 16))
+                            connectionSocket.send(sendInboxEncrypted)
+
+                            # Receive OK message from client
+                            okMsgEncrypted = connectionSocket.recv(2048)
+                            delay(0.1)
+                            okPadded = cipher_symmetric.decrypt(okMsgEncrypted)
+                            okMsg = unpad(okPadded, 16).decode('ascii')
+                        elif(menuChoice == '4'):
+                            print(f"Terminating connection with {username}")
+                            break
                 if (validUser == 0):
                     # Invalid user, send termination notice
                     invalidMsg = "Invalid username or password"
@@ -215,18 +260,18 @@ def server():
                         f"The received client information: {username} is invalid (Connection Terminated).")
 
                 connectionSocket.close()
-
                 return
-
+           
             # Parent doesn't need this connection
             connectionSocket.close()
-
+            
+            
         except socket.error as e:
             print('An error occured:', e)
             serverSocket.close()
             sys.exit(1)
         except:
-            print('Goodbye')
+            #print('Goodbye')
             serverSocket.close()
             sys.exit(0)
 
