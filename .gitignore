@@ -1,0 +1,5 @@
+# Installed VSCode extensions
+.vscode
+
+# txt files for testing
+*.txt
