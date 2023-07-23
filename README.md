@@ -34,6 +34,12 @@ the client is who they say they are.
 - The server also does not use any encryption to store the private keys on the
     client. This means that anyone with access to the client can read the private
     keys.
+- The server does not use a firewall to prevent the client from overloading the
+    server with requests. This means that the client can prevent other clients
+    from sending emails.
+- The server does not prevent a client from logging on multiple times with the
+    same username. This means that they can prevent other clients from logging
+    in by using up all the available connections.
 
 ### Potential hacks
 - The server could be hacked to read the emails stored on the server.
@@ -41,6 +47,8 @@ the client is who they say they are.
 - The client could be hacked to read the private keys stored on the client.
 - Assuming the client is the attacker, the client could overload the server with
     requests to prevent other clients from sending emails.
+- Assuming the client is the attacker, the client could log on multiple times
+    with the same username to prevent other clients from logging in.
 
 ### How to improve security
 - The server could use encryption to store the emails on the server. This would
@@ -51,7 +59,9 @@ the client is who they say they are.
     would prevent anyone with access to the client from reading the private keys.
 - The server could use a firewall to prevent the client from overloading the
     server with requests.
-
+- The server could prevent a client from logging on multiple times with the same
+    username by adding a list of currently logged in users and checking it before
+    allowing a client to log in.
 
 ### How to use?
 - make sure you have python installed
