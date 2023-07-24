@@ -1,3 +1,9 @@
+# Description: This is the client program for the email system. It will
+#              connect to the server and send and receive messages.
+#              It will also generate a symmetric key and send it to the server
+#              encrypted with the server's public key.
+###############################################################################
+
 import socket
 import os, datetime
 import sys
@@ -7,13 +13,22 @@ from Crypto.Util.Padding import pad, unpad
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
+###############################################################################
+
 def delay(seconds):
+    """
+    Delays the program for the specified number of seconds
+    Params: seconds - the number of seconds to delay
+    Return: None
+    """
     start_time = datetime.datetime.now()
     while True:
         current_time = datetime.datetime.now()
         elapsed_time = (current_time - start_time).total_seconds()
         if elapsed_time >= seconds:
             break
+
+###############################################################################
 
 def client():
     # Server Information
@@ -211,6 +226,36 @@ def client():
                 okMsgEncrypted = cipher_symmetric.encrypt(
                 pad(okMsg.encode('ascii'), 16))
                 clientSocket.send(okMsgEncrypted)
+
+            elif (menuChoice == "3"):
+                # Receive email index request from server
+                emailIndexAskEncrypted = clientSocket.recv(2048)
+                emailIndexAskPadded = cipher_symmetric.decrypt(emailIndexAskEncrypted)
+                emailAskIndex = unpad(emailIndexAskPadded, 16).decode('ascii')
+
+                index = input(emailAskIndex)
+
+                # Send index to server
+                indexEncrypted = cipher_symmetric.encrypt(
+                    pad(index.encode('ascii'), 16))
+                clientSocket.send(indexEncrypted)
+
+                delay(0.1)
+
+                # Receive email from server
+                emailEncrypted = clientSocket.recv(2048)
+                emailPadded = cipher_symmetric.decrypt(emailEncrypted)
+                email = unpad(emailPadded, 16).decode('ascii')
+
+                # Print email to client
+                print(email)
+
+                # Send OK response message to server
+                okMsg = "OK"
+                okMsgEncrypted = cipher_symmetric.encrypt(
+                pad(okMsg.encode('ascii'), 16))
+                clientSocket.send(okMsgEncrypted)
+
         # Client terminate connection with the server
         print(f"Terminating connection with server")
         clientSocket.close()
@@ -221,5 +266,6 @@ def client():
         sys.exit(1)
 
 
-# ----------
-client()
+###############################################################################
+if __name__ == "__main__":
+    client()

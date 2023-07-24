@@ -1,3 +1,8 @@
+# Description: This is the server program for the secure email system. It will
+#              accept connections from clients and perform the necessary
+#              operations to send and receive emails.
+###############################################################################
+
 import socket
 import os, datetime
 import sys
@@ -9,13 +14,25 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 
+###############################################################################
+
 def format_inbox_msg(inbox):
+    """
+    Formats the inbox to be sent to the client
+    Params: inbox - the inbox to be formatted
+    Return: the formatted inbox
+    """
     inboxMsg = f"{'Index'}\t{'From'.ljust(12)}\t{'DateTime'.ljust(26)}\t{'Title'.ljust(12)}\n"
     for i in range(len(inbox)):
         inboxMsg +=  f'{i}\t{inbox[i]["From"].ljust(12)}\t{str(inbox[i]["DateTime"]).ljust(26)}\t{inbox[i]["Title"].ljust(12)}\n'
     return inboxMsg
-#get the values from the file
+
 def get_inbox_data(data):
+    """
+    Parses the inbox data into a dictionary
+    Params: data - the inbox data to be parsed
+    Return: the parsed inbox data
+    """
     formatData = {}
     for line in data.splitlines():
         key, val = line.split(": ")
@@ -28,8 +45,12 @@ def get_inbox_data(data):
             formatData[key] = val
             return formatData
         
-#get inbox data and sort it from latest to most recent
 def get_inbox(username):
+    """
+    Get the inbox from the user's directory
+    Params: username - the user's username
+    Return: the inbox
+    """
     inbox = []
     for root, direct, files in os.walk(username):
         for file in files:
@@ -41,13 +62,90 @@ def get_inbox(username):
     sortedInbox = sorted( inbox, key=lambda item: item["DateTime"])
     return format_inbox_msg(sortedInbox)
 
+###############################################################################
+
+def get_email_data(data):
+    """
+    Parses the email data into a dictionary
+    Params: data - the email data to be parsed
+    Return: the parsed email data
+    """
+
+    emailData = {}
+
+    fields = data.split('\n')
+
+    # Remove empty lines
+    for line in fields:
+        if not line.strip():
+            continue
+
+        # Parse the email
+        if ": " in line:
+            key, value = line.split(': ', 1)
+
+
+            emailData[key] = value
+
+        # SPECIAL CASE **** Parse the content ****
+        # The content is the last field in the email
+        # It is the only field that has its value 
+        # on a different line than the key
+        else:
+            if line.startswith('Content'):
+                current_field = 'Content'
+
+            else:
+                emailData[current_field] = line
+
+    return emailData
+
+
+def email_to_string(email):
+    """
+    Formats the email to be sent to the client
+    Params: email - the email to be formatted
+    Return: the formatted email"""
+
+    emailString = f"From: {email['From']}\nTo: {email['To']}\nTime and Date: {email['Time and Date']}\nTitle: {email['Title']}\nContent Length: {email['Content Length']}\nContent:\n{email['Content']}"
+    
+    return emailString
+
+def get_email(username, index):
+    """
+    Get the email from the user's directory
+    Parems: username - the user's username
+            index - the index of the email to get
+    Return: the email at the index
+    """
+    inbox = []
+    for root, direct, files in os.walk(username):
+        for file in files:
+            path = f"{username}/{file}"
+            with open(path,'r' ) as data:
+                data = data.read()
+                formatData = get_email_data(data)
+                inbox.append(formatData)
+    sortedInbox = sorted(inbox, key=lambda item: item["Time and Date"])
+
+    return ("\n" + email_to_string(sortedInbox[index]) + "\n")
+
+###############################################################################
+
 def delay(seconds):
+    """
+    Delays the program for the specified number of seconds
+    Params: seconds - the number of seconds to delay
+    Return: None
+    """
     start_time = datetime.datetime.now()
     while True:
         current_time = datetime.datetime.now()
         elapsed_time = (current_time - start_time).total_seconds()
         if elapsed_time >= seconds:
             break
+
+###############################################################################
 
 def server():
     # Server port
@@ -249,9 +347,38 @@ def server():
                             delay(0.1)
                             okPadded = cipher_symmetric.decrypt(okMsgEncrypted)
                             okMsg = unpad(okPadded, 16).decode('ascii')
+                        elif (menuChoice == "3"):
+                            # Display Email Subprotocol
+                            # Send the client the view email message
+                            viewMailMsg = "Enter the email index you wish to view:"
+                            viewMailMsgEncrypted = cipher_symmetric.encrypt(
+                                pad(viewMailMsg.encode('ascii'), 16))
+                            connectionSocket.send(viewMailMsgEncrypted)
+
+                            # Receive email index from client
+                            emailIndexEncrypted = connectionSocket.recv(2048)
+                            emailIndexPadded = cipher_symmetric.decrypt(
+                                emailIndexEncrypted)
+                            emailIndex = unpad(
+                                emailIndexPadded, 16).decode('ascii')
+                            
+                            # Send the email to the client
+                            email = get_email(username, int(emailIndex))
+
+                            emailEncrypted = cipher_symmetric.encrypt(
+                                pad(email.encode('ascii'), 16))
+                            connectionSocket.send(emailEncrypted)
+
+                            # Receive OK message from client
+                            okMsgEncrypted = connectionSocket.recv(2048)
+                            delay(0.1)
+                            okPadded = cipher_symmetric.decrypt(okMsgEncrypted)
+                            okMsg = unpad(okPadded, 16).decode('ascii')
+
                         elif(menuChoice == '4'):
                             print(f"Terminating connection with {username}")
                             break
+
                 if (validUser == 0):
                     # Invalid user, send termination notice
                     invalidMsg = "Invalid username or password"
@@ -275,5 +402,6 @@ def server():
             serverSocket.close()
             sys.exit(0)
 
-# -------
-server()
+###############################################################################
+if __name__ == "__main__":
+    server()
