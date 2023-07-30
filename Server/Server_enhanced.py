@@ -16,6 +16,13 @@ from Crypto.Random import get_random_bytes
 
 ###############################################################################
 def change_state(jsonData, client, state):
+    """
+    Changes the state of the client in the json file
+    Params: jsonData - the json data to be changed
+            client - the client to be changed
+            state - the state to change to
+    Return: None
+    """
     jsonData[client]["status"] = state
     with open("new_user_pass.json", "w") as jsonFile:
         json.dump(jsonData, jsonFile)
@@ -131,6 +138,10 @@ def get_email(username, index):
                 formatData = get_email_data(data)
                 inbox.append(formatData)
     sortedInbox = sorted(inbox, key=lambda item: item["Time and Date"])
+
+    # Check if the index is valid
+    if (index >= len(sortedInbox)):
+        return 1
 
     return ("\n" + email_to_string(sortedInbox[index]) + "\n")
 
@@ -372,6 +383,14 @@ def server():
                             
                             # Send the email to the client
                             email = get_email(username, int(emailIndex))
+
+                            if email == 1:
+                                # Invalid index
+                                invalidMsg = "Invalid email index"
+                                invalidMsgEncrypted = cipher_symmetric.encrypt(
+                                    pad(invalidMsg.encode('ascii'), 16))
+                                connectionSocket.send(invalidMsgEncrypted)
+                                continue
 
                             emailEncrypted = cipher_symmetric.encrypt(
                                 pad(email.encode('ascii'), 16))
