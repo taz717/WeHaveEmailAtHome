@@ -1,4 +1,4 @@
-# CMPT361_Final
+# WeHaveEmailAtHome
 ## Taz Khallaf, Travis Mundy and Adam Polywkan
 
 ### What is it?
